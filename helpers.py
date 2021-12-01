@@ -85,4 +85,3 @@ def time_it(command):
 def time_it_all(args: List):
     with multiprocessing.Pool(4) as p:
         p.map(time_it, args)
-
