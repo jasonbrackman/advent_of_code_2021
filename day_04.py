@@ -5,31 +5,26 @@ import helpers
 
 
 class Board:
-    def __init__(self) -> None:
-        self.rows = []
-        self.cols = [[], [], [], [], []]
+    def __init__(self, rows: List[List[int]]) -> None:
+        self._rows = rows
+        self._cols = helpers.rotate_matrix_right(rows)
 
-    def bingo(self, nums):
-        for line in itertools.chain(self.rows, self.cols):
+    def bingo(self, nums: Set[int]) -> bool:
+        for line in itertools.chain(self._rows, self._cols):
             if all(c in nums for c in line):
                 return True
         return False
 
     def unmarked_value(self, nums: Set[int]) -> int:
         total = 0
-        for row in self.rows:
+        for row in self._rows:
             total += sum(r for r in row if r not in nums)
 
         return total
 
-    def populate_cols(self):
-        for r in self.rows:
-            for index, c in enumerate(r):
-                self.cols[index].append(c)
-
-    def __str__(self):
+    def __str__(self) -> str:
         msg = ""
-        for r in self.rows:
+        for r in self._rows:
             msg += "".join(str(r))
         return msg
 
@@ -44,11 +39,10 @@ def parse_info(lines: List[str]) -> Tuple[List[int], List[Board]]:
     try:
         while True:
             next(lines)  # skip the blank line
-            b = Board()
+            rows = []
             for i in range(5):
-                b.rows.append([int(i) for i in next(lines).split()])
-            b.populate_cols()
-            boards.append(b)
+                rows.append([int(i) for i in next(lines).split()])
+            boards.append(Board(rows))
     except StopIteration:
         pass
     return header, boards

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import json
 import multiprocessing
 import time
-from typing import Callable, List, NamedTuple
+from typing import Any, Callable, List, NamedTuple
 
 
 def get_lines(path: str) -> List[str]:
@@ -46,6 +46,14 @@ class Node:
         """
         self.state = state
         self.parent = parent
+
+
+def rotate_matrix_right(grid: List[List[Any]]) -> List[List[Any]]:
+    rotated = [[] for _ in range(len(grid[0]))]
+    for cell in grid:
+        for index, c in enumerate(cell):
+            rotated[index].append(c)
+    return rotated
 
 
 # def bfs(
