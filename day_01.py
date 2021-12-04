@@ -18,7 +18,7 @@ def part01(data: List[int]) -> int:
 
 
 def part02(data: List[int]) -> int:
-    items = [sum((x, y, z)) for x, y, z in zip(data, data[1:], data[2:])]
+    items = [sum(xyz) for xyz in zip(data, data[1:], data[2:])]
     return part01(items)
 
 
