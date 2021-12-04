@@ -1,11 +1,12 @@
+from typing import List
+
 import helpers
 
 
-def get_gamma_rate(lines):
+def get_rates(lines: List[str]) -> [int, int]:
     final = [0] * len(lines[0])
     for line in lines:
-        items = list(line)
-        for index, item in enumerate(items):
+        for index, item in enumerate(line):
             final[index] += item == "1"
 
     g = ["1" if f > len(lines) // 2 else "0" for f in final]
@@ -14,24 +15,20 @@ def get_gamma_rate(lines):
 
 
 def part01(lines) -> int:
-    gamma_rate, epsilon_rate = get_gamma_rate(lines)
+    gamma_rate, epsilon_rate = get_rates(lines)
     return gamma_rate * epsilon_rate
 
 
 def get_generator_rating(lines, index):
     nums = [line[index] == "1" for line in lines]
-    if sum(nums) < len(lines) // 2:
-        return [line for line in lines if line[index] == "0"]
-    else:
-        return [line for line in lines if line[index] == "1"]
+    bit = "0" if sum(nums) < len(lines) // 2 else "1"
+    return [line for line in lines if line[index] == bit]
 
 
 def get_scrubbing_rating(lines, index):
     nums = [line[index] == "0" for line in lines]
-    if sum(nums) > len(lines) // 2:
-        return [line for line in lines if line[index] == "1"]
-    else:
-        return [line for line in lines if line[index] == "0"]
+    bit = "1" if sum(nums) > len(lines) // 2 else "0"
+    return [line for line in lines if line[index] == bit]
 
 
 def part02(lines) -> int:
