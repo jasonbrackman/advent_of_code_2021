@@ -9,3 +9,7 @@ Python 3.8
 - [day_03.run]: Completed in 5.7 ms
 - [day_04.run]: Completed in 78.6 ms
 - [day_05.run]: Completed in 218.2 ms
+
+Visuals
+- Day 05
+![](visuals/day_05.png)
