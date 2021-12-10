@@ -6,7 +6,7 @@ import day_05
 import day_06
 import day_07
 import day_08
-
+import day_09
 import helpers
 
 
@@ -21,5 +21,6 @@ if __name__ == "__main__":
             day_06.run,
             day_07.run,
             day_08.run,
+            day_09.run,
         ]
     )
