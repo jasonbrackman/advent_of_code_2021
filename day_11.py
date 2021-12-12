@@ -1,6 +1,9 @@
+from typing import List, Set, Tuple
+
 import helpers
 
-def flash(grid, i, j):
+
+def flash(grid: List[List[int]], i: int, j: int) -> Set[Tuple[int, int]]:
     new = set()
     for ii in (i - 1, i, i + 1):
         if 0 <= ii < len(grid):
@@ -13,8 +16,10 @@ def flash(grid, i, j):
                             new.add((ii,jj))
     return new
 
+
 # Rules
-def step(grid, rounds):
+def step(lines: List[str], rounds) -> int:
+    grid = [[int(i) for i in line] for line in lines]
     count = 0
     for step in range(rounds):
         flashed = set()
@@ -37,7 +42,7 @@ def step(grid, rounds):
 
             count += 1
 
-        # Retun if all the cells flashed on this step
+        # Return early if all the cells flashed on this step
         if sum([sum(g) for g in grid]) == 0:
             return step+1
 
@@ -45,14 +50,10 @@ def step(grid, rounds):
     return count
 
 
-def run():
+def run() -> None:
     lines = helpers.get_lines(r'./data/day_11.txt')
-
-    grid = [[int(i) for i in line] for line in lines]
-    assert step(grid, 100) == 1613
-
-    grid = [[int(i) for i in line] for line in lines]
-    assert step(grid, 1_000) == 510
+    assert step(lines, 100) == 1613
+    assert step(lines, 1_000) == 510
 
 
 if __name__ == "__main__":
