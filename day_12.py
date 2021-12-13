@@ -14,17 +14,26 @@ class Node:
         self.last = part
         if part.islower():
             if part in self.parts:
+                # dead end
                 self.dead_end = True
             else:
                 self.parts.append(part)
         else:
             self.parts.append(part)
 
+    def copy(self):
+        new = Node()
+        new.last = self.last
+        new.parts = copy.copy(self.parts)
+        new.dead_end = self.dead_end
+
+        return new
+
     def __str__(self):
         return '->'.join(p for p in self.parts)
 
     def __repr__(self):
-        return f"Node({self.last=}, {self.parts=}, {self.small_caves=})"
+        return f"Node({self.last=}, {self.parts=})"
 
 
 class NodePart01(Node):
@@ -60,11 +69,22 @@ class NodePart02(Node):
         else:
             self.parts.append(part)
 
+    def copy(self):
+        new = NodePart02()
+
+        new.last = self.last
+        new.dead_end = self.dead_end
+        new.parts = list(self.parts)
+        new.small_caves = set(self.small_caves)
+        new.other_caves = copy.copy(self.other_caves)
+        new.used_time = self.used_time
+
+        return new
 
 def children(rules, n: Node):
     new_nodes = []
     for rule in rules[n.last]:
-        old_node = copy.deepcopy(n)
+        old_node = n.copy()
         old_node.add_part(rule)
         if old_node.dead_end is False:
             new_nodes.append(old_node)

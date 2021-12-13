@@ -15,6 +15,7 @@ Python 3.8
 - [day_09.run]: Completed in 44.1 ms
 - [day_10.run]: Completed in 2.7 ms
 - [day_11.run]: Completed in 98.3 ms
+- [day_12.run]: Completed in 4958.8 ms
 
 Visuals
 - Day 05
