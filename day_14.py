@@ -4,7 +4,7 @@ from typing import Dict, Tuple
 import helpers
 
 
-def parse(lines) -> Tuple[Dict[str, int], Dict[str, str], str]:
+def parse(lines) -> Tuple[Dict[str, int], Dict[str, str], chr]:
     rules = iter(lines)  # create iter
 
     template = next(rules)
@@ -19,7 +19,7 @@ def parse(lines) -> Tuple[Dict[str, int], Dict[str, str], str]:
     return counts, rules, template[-1]
 
 
-def run():
+def run() -> None:
     lines = helpers.get_lines(r"./data/day_14.txt")
     counts, rules, extra = parse(lines)
 
@@ -27,7 +27,9 @@ def run():
     assert insertion_process(40, counts.copy(), extra, rules) == 3459822539451
 
 
-def insertion_process(steps, counts, extra, rules):
+def insertion_process(
+    steps: int, counts: Dict[str, int], extra: chr, rules: Dict[str, str]
+) -> int:
     for step in range(steps):
         t = defaultdict(int)
         for (k1, k2), v in counts.items():
@@ -36,9 +38,9 @@ def insertion_process(steps, counts, extra, rules):
             t[new + k2] += v
             t[k1 + k2] -= v
 
-        # Not allowed to alter item counts during an interation
-        # so redoing the work and applying the changed numbers
-        # to the original.
+        # Cannot add keys during an iteration loop, so
+        # redoing the work and applying the changed
+        # numbers to the original.
         for k, v in t.items():
             counts[k] += v
 
