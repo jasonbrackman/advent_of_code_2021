@@ -1,4 +1,4 @@
-import copy
+from typing import Dict, List, Tuple
 
 import helpers
 
@@ -9,8 +9,8 @@ def parse(lines):
     x = -1
     y = -1
     for line in lines:
-        if ',' in line:
-            dot = [int(i) for i in line.split(',')]
+        if "," in line:
+            dot = [int(i) for i in line.split(",")]
 
             if dot[0] > x:
                 x = dot[0]
@@ -19,74 +19,68 @@ def parse(lines):
 
             dots.append(dot)
 
-        elif '=' in line:
-            letter, num = line.split()[-1].split('=')
+        elif "=" in line:
+            letter, num = line.split()[-1].split("=")
             folds.append([letter, int(num)])
 
     return x, y, dots, folds
 
 
 def run():
-    lines = helpers.get_lines(r'./data/day_13.txt')
+    lines = helpers.get_lines(r"./data/day_13.txt")
     x, y, dots, folds = parse(lines)
-    table = create_table(dots, x, y)
 
-    assert part01([folds[0]], copy.deepcopy(table)) == 647
+    # Part01
+    table_part01 = create_dict(dots)
+    x, y = fold_paper([folds[0]], table_part01, x, y)
+    assert (
+        sum(v == "#" for (i, j), v in table_part01.items() if i <= y and j <= x) == 647
+    )
 
-    result = part02(folds, copy.deepcopy(table))
-    expected = [
-        '#..#.####...##.#..#...##.###...##....##.',
-        '#..#.#.......#.#..#....#.#..#.#..#....#.',
-        '####.###.....#.####....#.#..#.#.......#.',
-        '#..#.#.......#.#..#....#.###..#.......#.',
-        '#..#.#....#..#.#..#.#..#.#.#..#..#.#..#.',
-        '#..#.####..##..#..#..##..#..#..##...##..',
+    # Part02
+    table_part02 = create_dict(dots)
+    x, y = fold_paper(folds, table_part02, x, y)
+
+    expected = [  # HEJHJRCJ
+        "#..#.####...##.#..#...##.###...##....##.",
+        "#..#.#.......#.#..#....#.#..#.#..#....#.",
+        "####.###.....#.####....#.#..#.#.......#.",
+        "#..#.#.......#.#..#....#.###..#.......#.",
+        "#..#.#....#..#.#..#.#..#.#.#..#..#.#..#.",
+        "#..#.####..##..#..#..##..#..#..##...##..",
     ]
-    for r, e in zip(result, expected):
-        assert ''.join(r) == e
+
+    results = []
+    for i in range(y - 1):
+        r = ""
+        for j in range(x - 1):
+            r += table_part02.get((i, j), ".")
+        results.append(r)
+    for r, e in zip(results, expected):
+        assert "".join(r) == e
 
 
-def part01(folds, table):
-    result = fold_paper(folds, table)
-    return sum(item.count('#') for item in result)
+def fold_paper(folds: List, table: Dict, x: int, y: int) -> Tuple[int, int]:
 
-
-def part02(folds, table):
-    return fold_paper(folds, table)
-
-
-def fold_paper(folds, table):
     for pos, fold in folds:
-        if pos == 'y':
-            y = fold
-            one, two = table[:y], list(reversed(table[y:]))
-            for i in range(y):
-                for j in range(len(one[0])):
-                    if two[i][j] == '#':
-                        one[i][j] = '#'
-            table = one
+        y = fold if pos == "y" else y
+        x = fold if pos == "x" else x
 
-        if pos == 'x':
-            x = fold
-            one, two = [t[:x] for t in table], [list(reversed(t[x + 1:])) for t in table]
-            for i in range(len(one)):
-                for j in range(x):
-                    if two[i][j] == '#':
-                        one[i][j] = '#'
+        for i in range(y):
+            for j in range(x):
+                ii = y + (y - i) if pos == "y" else i
+                jj = x + (x - j) if pos == "x" else j
+                if table.get((ii, jj), ".") == "#":
+                    table[(i, j)] = "#"
 
-            table = one
-
-    return table
+    # for convenience, we add +1 to the x, y values for range()
+    return x + 1, y + 1
 
 
-def create_table(dots, x, y):
-    table = []
-    for i in range(y + 1):
-        row = []
-        for j in range(x + 1):
-            icon = '#' if [j, i] in dots else '.'
-            row.append(icon)
-        table.append(row)
+def create_dict(dots):
+    table = dict()
+    for (x, y) in dots:
+        table[(y, x)] = "#"
     return table
 
 
