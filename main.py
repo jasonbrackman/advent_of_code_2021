@@ -11,6 +11,7 @@ import day_10
 import day_11
 import day_12
 import day_13
+import day_14
 import helpers
 
 
@@ -30,5 +31,6 @@ if __name__ == "__main__":
             day_11.run,
             day_12.run,
             day_13.run,
+            day_14.run,
         ]
     )
