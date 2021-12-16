@@ -23,3 +23,5 @@ Python 3.8
 Visuals
 - Day 05
 ![](visuals/day_05.png)
+- Day 15
+![](visuals/day_15.png)

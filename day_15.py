@@ -28,6 +28,18 @@ class LUT:
 
         return self
 
+    def get_grid(self):
+        cells = dict()
+        for y in range(self.y_len * self.mult):
+            y_bonus = y // self.y_len
+            for x in range(self.x_len * self.mult):
+                x_bonus = x // self.x_len
+                val = self.cells[(x % self.y_len, y % self.y_len)] + y_bonus + x_bonus
+                if val > 9:
+                    val %= 9
+                cells[(x, y)] = val
+        return cells
+
     def update_multi(self, num: int):
         self.mult = num
 
@@ -35,19 +47,25 @@ class LUT:
         return (self.x_len * self.mult) - 1, (self.y_len * self.mult) - 1
 
 
+@dataclass(order=True)
+class Node:
+    state: Tuple[int, int]
+    parent: "Node" = field(default=None)
+
+
 def search(lut: LUT, pos: Tuple[int, int], end_pos: Tuple[int, int]) -> int:
     visited = set()
     pq = PriorityQueue()
-    pq.put((0, pos))
+    pq.put((0, Node(pos)))
     while pq:
-        risk, state = pq.get()
-        if state == end_pos:
-            return risk
-        n = neighbours(lut, state)
+        risk, node = pq.get()
+        if node.state == end_pos:
+            return risk, node
+        n = neighbours(lut, node.state)
         for (node_risk, node_state) in n:
             if node_state not in visited:
                 visited.add(node_state)
-                pq.put((risk + node_risk, node_state))
+                pq.put((risk + node_risk, Node(node_state, node)))
 
 
 def neighbours(lut: LUT, pos: Tuple[int, int]) -> List[Tuple[int, Tuple[int, int]]]:
@@ -85,11 +103,13 @@ def run() -> None:
     lut = LUT().load(lines)
 
     # _ Part01
-    assert search(lut, (0, 0), lut.end_pos()) == 462
+    risk, node = search(lut, (0, 0), lut.end_pos())
+    assert risk == 462
 
     # _ Part02
     lut.update_multi(5)
-    assert search(lut, (0, 0), lut.end_pos()) == 2846
+    risk, node = search(lut, (0, 0), lut.end_pos())
+    assert risk == 2846
 
 
 if __name__ == "__main__":
