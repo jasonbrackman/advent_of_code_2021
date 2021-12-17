@@ -1,6 +1,6 @@
 import collections
 from enum import Enum
-from typing import Callable
+from typing import Callable, Tuple
 import math
 
 import helpers
@@ -13,39 +13,39 @@ class LengthType(Enum):
 
 class Packet:
     hex_to_bin = {
-        '0': '0000',
-        '1': '0001',
-        '2': '0010',
-        '3': '0011',
-        '4': '0100',
-        '5': '0101',
-        '6': '0110',
-        '7': '0111',
-        '8': '1000',
-        '9': '1001',
-        'A': '1010',
-        'B': '1011',
-        'C': '1100',
-        'D': '1101',
-        'E': '1110',
-        'F': '1111',
+        "0": "0000",
+        "1": "0001",
+        "2": "0010",
+        "3": "0011",
+        "4": "0100",
+        "5": "0101",
+        "6": "0110",
+        "7": "0111",
+        "8": "1000",
+        "9": "1001",
+        "A": "1010",
+        "B": "1011",
+        "C": "1100",
+        "D": "1101",
+        "E": "1110",
+        "F": "1111",
     }
 
     def __init__(self):
-        self.m = None
-        self.p = 0
-        self.versions = []
-        self.q = True
+        self.m = None  # memory
+        self.p = 0  # pointer
+        self.versions = []  # keep track of versions for scoring of part01
+        self.logger = False
         self.stack = collections.defaultdict(list)
 
     def load(self, line):
         self.p = 0
-        self.m = ''.join([self.hex_to_bin[c] for c in line])
+        self.m = "".join([self.hex_to_bin[c] for c in line])
         self.versions.clear()
         self.stack.clear()
 
-        if not self.q:
-            print('Memory:', self.m)
+        if self.logger:
+            print("Memory:", self.m)
 
     def step(self, stack_id=0):
         if self.p > len(self.m):
@@ -59,25 +59,25 @@ class Packet:
             self._process_id4(stack_id)
         else:
             if id_ == 0:
-                current_func = sum
+                current_func = f">>OC0 - stack[#] sum()", sum
             elif id_ == 1:
-                current_func = math.prod
+                current_func = ">>OC1 - stack[#] mat.prod()", math.prod
             elif id_ == 2:
-                current_func = min
+                current_func = ">>OC2 - stack[#] min()", min
             elif id_ == 3:
-                current_func = max
+                current_func = ">>OC3 - stack[#] max()", max
             elif id_ == 5:
-                current_func = lambda gt: int(gt[0] > gt[1])
+                current_func = ">>OC5 - stack[#] gt()", lambda gt: int(gt[0] > gt[1])
             elif id_ == 6:
-                current_func = lambda lt: int(lt[0] < lt[1])
+                current_func = ">>OC6 - stack[#] lt()", lambda lt: int(lt[0] < lt[1])
             elif id_ == 7:
-                current_func = lambda eq: int(eq[0] == eq[1])
+                current_func = ">>OC7 - stack[#] eq()", lambda eq: int(eq[0] == eq[1])
 
             length_type_id = self._get_length_type()
 
             # 15-bit number
             if length_type_id == LengthType.FIFTEEN_BIT:
-                num = self.m[self.p: self.p + 15]
+                num = self.m[self.p : self.p + 15]
                 self.p += 15
 
                 read_mem = self.p + (int(num, 2))
@@ -87,7 +87,7 @@ class Packet:
 
             # 11 bit number
             elif length_type_id == LengthType.ELEVEN_BIT:
-                num = self.m[self.p: self.p + 11]
+                num = self.m[self.p : self.p + 11]
                 self.p += 11
                 stack_id += 1
                 for _ in range(int(num, 2)):
@@ -99,10 +99,19 @@ class Packet:
             stack_id -= 1
             self.stack[stack_id].append(pop)
 
-    def _calculate(self, current_func: Callable, stack_id: int):
-        if not self.q:
-            print(current_func, self.stack[stack_id], '=')
-        self.stack[stack_id] = [current_func(self.stack[stack_id])]
+    def _calculate(self, current_func: Tuple[str, Callable], stack_id: int):
+
+        total = [current_func[1](self.stack[stack_id])]
+
+        if self.logger:
+            print(
+                current_func[0].replace("#", str(stack_id)),
+                self.stack[stack_id],
+                "=",
+                total,
+            )
+
+        self.stack[stack_id] = total
 
     def _get_length_type(self) -> LengthType:
         # this is op code domain -- any id that is not 4
@@ -117,30 +126,31 @@ class Packet:
         :return: a literal base 10 value of the binary numbers collected.
         """
 
-        if not self.q:
-            print(">>OpCode4 - Processing a literal value")
         cmd = int(self.m[self.p], 2)
 
         self.p += 1
-        num = ''
+        num = ""
         while cmd != 0:
-            num += self.m[self.p:self.p + 4]
+            num += self.m[self.p : self.p + 4]
             self.p += 4
             cmd = int(self.m[self.p], 2)
             self.p += 1
-        num += self.m[self.p:self.p + 4]
+        num += self.m[self.p : self.p + 4]
         self.p += 4
         self.stack[stack_id].append(int(num, 2))
 
+        if self.logger:
+            print(f">>OC4 - stack[{stack_id}] INPUT {int(num, 2)}")
+
     def _get_id(self) -> int:
         """Return opcode id for the packet."""
-        id_ = int(self.m[self.p:self.p + 3], 2)
+        id_ = int(self.m[self.p : self.p + 3], 2)
         self.p += 3
         return id_
 
     def _get_version(self) -> int:
         """Return version of the packet."""
-        version = int(self.m[self.p:self.p + 3], 2)
+        version = int(self.m[self.p : self.p + 3], 2)
         self.versions.append(version)
         self.p += 3
         return version
@@ -148,16 +158,17 @@ class Packet:
 
 def run():
     tests()
-    lines = helpers.get_lines(r'./data/day_16.txt')
+    lines = helpers.get_lines(r"./data/day_16.txt")
     packet = Packet()
+    packet.logger = False
     packet.load(lines[0])
     packet.step()
-    assert sum(packet.versions) == 1007
-    assert packet.stack[0][0] == 834151779165
+    assert sum(packet.versions) == 1007  # part01
+    assert packet.stack[0][0] == 834151779165  # part02
 
 
 def tests():
-    lines = helpers.get_lines(r'./data/day_16_test.txt')
+    lines = helpers.get_lines(r"./data/day_16_test.txt")
     expect = [2021]
     packet = Packet()
     packet.load(lines[0])
