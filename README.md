@@ -30,3 +30,7 @@ Visuals
 - Day 15
 
 ![](visuals/day_15.png)
+
+- Day 17 (demonstrates a nice curve for the volley, but does not depict the solution.)
+
+![](visuals/day_17.png)
