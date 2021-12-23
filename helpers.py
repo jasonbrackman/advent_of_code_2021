@@ -2,8 +2,8 @@ from dataclasses import dataclass
 import json
 import multiprocessing
 import time
-from typing import Any, Callable, List, NamedTuple
-from multiprocessing.pool import ThreadPool
+from typing import Any, List, NamedTuple
+
 
 def get_lines(path: str) -> List[str]:
     with open(path, "r") as text:
