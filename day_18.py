@@ -1,90 +1,114 @@
-import collections
+from __future__ import annotations
+
 import re
-from typing import Iterator, List, Optional
+from collections import deque
+from typing import Iterator, List, Optional, Tuple
 
 import helpers
 
 
-
-class Node:
+class NodePair:
     EXPLODE_DEPTH = 4
     NUM_PATTERN = re.compile(r"-?\d+")
 
-    def __init__(self, depth, parent=None):
-        self.left: Optional["Node"] = None
-        self.right: Optional["Node"] = None
-        self.value: Optional[int] = None
+    def __init__(self, value=None, depth=None, parent=None):
+        self.left: Optional[NodePair] = None
+        self.right: Optional[NodePair] = None
+        self.value: Optional[int] = value
 
-        self.parent: Optional["Node"] = parent
-        self.depth: int = depth
+        self.parent: Optional[NodePair] = parent
+        self.depth: int = 0 if depth is None else depth
 
-    def __lt__(self, other):
-        return self.depth < other.depth
-
-    def load(self, fish, node=None):
+    def load(self, fish: List[List], node=None):
         if node is None:
             node = self
 
         left, right = fish
 
         if isinstance(left, int):
-            node.left = left
+            node.left = NodePair(depth=node.depth + 1, parent=node)
+            node.left.value = left
         else:
-            node.left = self.load(left, Node(node.depth + 1, parent=node))
+            node.left = self.load(left, NodePair(depth=node.depth + 1, parent=node))
 
         if isinstance(right, int):
-            node.right = right
+            node.right = NodePair(depth=node.depth + 1, parent=node)
+            node.right.value = right
         else:
-            node.right = self.load(right, Node(node.depth + 1, parent=node))
+            node.right = self.load(right, NodePair(depth=node.depth + 1, parent=node))
 
         return node
 
-    def can_calc(self, n) -> bool:
-        if isinstance(self, Node):
-            a = n.left
-            b = n.right
-            return isinstance(a, int) is isinstance(b, int) is True
-        return False
+    @staticmethod
+    def neighbours(node: NodePair) -> Tuple[Optional[NodePair], Optional[NodePair]]:
+        p, n = None, None
 
-    def _magnify(self, n) -> int:
-        """Will raise if caller did not enusure a self.can_calc can happen."""
-        return 3 * n.left + 2 * n.right
+        if node == node.root():
+            return p, n
 
-    def magnitude(self) -> int:
+        if node.is_value():
+            p, n = NodePair._neighbours(node)
+        else:
+            if node.left is not None:
+                p, _ = NodePair._neighbours(node.left)
+            if node.right is not None:
+                _, n = NodePair._neighbours(node.right)
 
-        node = self.root()
-        left_switch = True
-        while isinstance(node, Node):
-            if node.can_calc(node):
-                if node.parent is None:
-                    return self._magnify(node)
+        return p, n
 
-                v = 3 * node.left + 2 * node.right
+    def explode(self, node: NodePair) -> None:
+        l_node, r_node = self.neighbours(node)
 
-                if left_switch:
-                    left_switch = False
-                    node.parent.left = v
-                else:
-                    left_switch = True
-                    node.parent.right = v
-                node = self.root()
+        if l_node and node.left:
+            l_node.value += node.left.value
+            node.left.value = 0
 
-            if isinstance(node.left, int) and isinstance(node.right, Node):
-                node = node.right
-                left_switch = False
+        if node.left:
+            node.left.value = 0
+
+        if r_node and node.right:
+            r_node.value += node.right.value
+
+        if node.right:
+            node.right.value = 0
+
+        if (node.left is node.right is None) is False:
+            if node.left:
+                node.value = node.left.value
+                node.left = None
+            if node.right:
+                node.value = node.right.value
+                node.right = None
+
+    @staticmethod
+    def _neighbours(node):
+        prev_ = None
+        next_ = None
+        seen_ = False
+        root_node = node.root()
+        for n in NodePair.traverse(root_node):
+            if n == node:
+                seen_ = True
                 continue
-
-            if isinstance(node.left, Node) and isinstance(node.right, int):
-                node = node.left
-                left_switch = True
-                continue
-
-            if left_switch:
-                node = node.left
             else:
-                node = node.right
+                if n.is_value():
+                    if not seen_:
+                        prev_ = n
+                    else:
+                        next_ = n
+                        break
+        return prev_, next_
 
-        return self._magnify(self)
+    def is_value(self):
+        return self.value is not None
+
+    @staticmethod
+    def can_calc(n: NodePair):
+        if n.left is None or n.left.value is None:
+            return False
+        if n.right is None or n.right.value is None:
+            return False
+        return True
 
     def root(self):
         n = self
@@ -92,250 +116,215 @@ class Node:
             n = n.parent
         return n
 
+    def add_left(self, other):
+        self.left = other
+        other.parent = self
+        self.update_depth()
+
+    def add_right(self, other):
+        self.right = other
+        other.parent = self
+        self.update_depth()
+
+    def update_depth(self):
+        for x in self.traverse_bfs(self.root()):
+            if x.parent is None:
+                x.depth = 0
+            else:
+                x.depth = x.parent.depth + 1
+
     @staticmethod
     def add(n1, n2):
-        new_node = Node(depth=0)
-        for t in n1.traverse(n1):
-            if hasattr(t, "depth"):
-                t.depth += 1
+        new_node = NodePair(depth=0)
+        n1.parent = new_node
+        n2.parent = new_node
         new_node.left = n1
-        new_node.left.parent = new_node
-        for t in n2.traverse(n2):
-            if hasattr(t, "depth"):
-                t.depth += 1
         new_node.right = n2
-        new_node.right.parent = new_node
+
+        # _ update the depth/parent
+        for t in NodePair.traverse(new_node):
+            if t != new_node:
+                t.depth += 1
+
         return new_node
 
-    def find_explosive_nodes(self) -> List["Node"]:
-        nodes = []
-        for n in self.traverse(self.root()):
-            if hasattr(n, "depth"):
-                if n.depth == self.EXPLODE_DEPTH:
-                    nodes.append(n)
+    @staticmethod
+    def traverse_bfs(node: NodePair) -> Iterator[NodePair]:
+        q = deque([node])
+        visited = set()
+        while q:
+            n = q.popleft()
+            visited.add(n)
+            yield n
+
+            if n.left and n.left not in visited:
+                q.append(n.left)
+            if n.right and n.right not in visited:
+                q.append(n.right)
+
+    @staticmethod
+    def traverse(node: NodePair) -> Iterator[NodePair]:
+        if node.left is not None:
+            yield from NodePair.traverse(node.left)
+
+        yield node
+
+        if node.right is not None:
+            yield from NodePair.traverse(node.right)
+
+    def find_explosive_nodes(self) -> List[NodePair]:
+        nodes = [
+            n
+            for n in self.traverse(self.root())
+            if n.depth == self.EXPLODE_DEPTH and n.value is None
+        ]
         return nodes
 
-    def split_big_numbers(self, node=None):
+    def __str__(self):
+        return (
+            f"{self.value}"
+            if self.is_value()
+            else f'[{self.left or ""},{self.right or ""}]'
+        )
+
+    def pprint(self):
+        print("*--")
+        for x in NodePair.traverse(self):
+            print("\t" * x.depth, f"{x.value if x.is_value() else '>'}")
+        print("--*")
+
+    def split_big_number(self) -> Tuple[NodePair, Optional[NodePair]]:
         """Find all numbers greater than 10 and return the parents to then do an ordered operation from
         left to right of exploding them into sets of two numbers."""
+        for x in self.traverse(self.root()):
+            if x.is_value():
+                v = x.value
+                if v > 9:
+                    # let's split
+                    plus_one = 1 if v % 2 != 0 else 0
 
-        created = []
+                    n1 = NodePair(depth=x.depth + 1, parent=x)
+                    n1.value = v // 2
 
-        s = str(self)
+                    n2 = NodePair(depth=x.depth + 1, parent=x)
+                    n2.value = v // 2 + plus_one
 
-        items = re.findall(self.NUM_PATTERN, str(self) if node is None else str(node))
-        for item in items:
+                    x.left = n1
+                    x.right = n2
+                    x.value = None
 
-            v = int(item)
-            if v > 9:
-                plus_one = 1 if v % 2 != 0 else 0
-                n = str([v // 2, v // 2 + plus_one])
-                s = s.replace(str(v), n, 1)
-                created.insert(0, n)
-                return Node(depth=0).load(eval(s)), created
-        return Node(depth=0).load(eval(s)), created
+                    return self, x
+        return self, None
 
-    def explode(self, node):
-        big_nums = []
-        l_node, l_side = self._get_adjacent_node("left", node)
-        r_node, r_side = self._get_adjacent_node("right", node)
+    def magnitude(self) -> Optional[int]:
 
-        if l_node:
-            v = getattr(l_node, l_side)
-            setattr(l_node, l_side, v + node.left)
-            if v + node.left > 9:
-                big_nums.append(l_node)
-            if l_side == "left" and not r_node:
-                l_node.right = 0  # the sum total of the parent node
-                # node.parent = None  # remove the original linkage
-        node.left = 0
+        root_node = self.root()
 
-        if r_node:
-            # print("RNODE:", r_node)
-            v = getattr(r_node, r_side)
-            setattr(r_node, r_side, v + node.right)
-            if v + node.right > 9:
-                big_nums.append(r_node)
-            if r_side == "right" and not l_node:
-                # print("why?", r_side)
-                r_node.left = 0  # the sum total of the parent node
-                # node.parent = None  # remove the original linkage
-        node.right = 0
+        def get_next():
+            for n in NodePair.traverse(root_node):
+                if NodePair.can_calc(n):
+                    return n
+            return None
 
-        if node.left == node.right == 0:
-            # print("node parent left:", node.parent.left, node.parent.left == node)
-            # print("node parent right:", node.parent.right, node.parent.right == node)
+        n = get_next()
 
-            if node.parent.left == node and isinstance(node.parent.left, Node):
-                node.parent.left = 0
+        while n is not None:
+            n.value = self._magnify(n)
+            n.left = n.right = None
 
-            if node.parent.right == node and isinstance(node.parent.right, Node):
-                node.parent.right = 0
+            if n.parent is None:
+                return n.value
 
-        return big_nums
+            n = get_next()
 
-    def traverse(self, node: "Node") -> Iterator["Node"]:
-        if isinstance(node, Node):
-            yield from self.traverse(node.left)
-            yield node
-            yield from self.traverse(node.right)
-        else:
-            yield node
+        return None
 
     @staticmethod
-    def _get_adjacent_node(attr, node):
-        other_attr = "left" if attr == "right" else "right"
-        p = node
-        visited = set()
-        while p:
-            visited.add(p)
-            # print(">>>", p, p.left, '<-', p.parent, '->', p.right)
-            # if p.parent is None -- but the adjacent is a Node and not an int, we must climb
-            # the opposite tree looking for the top most stem that contains an int.
-            if p.parent is None:
-                # we know that the answer is not an int
+    def _magnify(n) -> int:
+        """Will raise if caller did not ensure a self.can_calc can happen."""
 
-                # is it a Node?
-                r = getattr(p, attr)
-                if isinstance(r, Node):
-                    # if this is the root of the node we are investigating -- then it's not helpful.
-                    # but if its adjacent -- we are interested.
-                    if r in visited:
-                        # print("skipping as it looks like we're just climbing where we came from.")
-                        return None, None
-
-                    p = r
-                    while True:
-                        r = getattr(p, other_attr)
-                        if isinstance(r, Node):
-                            p = r
-                            continue
-                        # print(p, other_attr)
-                        return p, other_attr
-                return None
-
-            r = getattr(p.parent, attr)
-
-            if isinstance(r, Node):
-                if r not in visited:
-                    test = Node.search_up(r, other_attr)
-                    return test, other_attr
-
-            if isinstance(r, int):
-                # print("R:", r, getattr(p.parent, other_attr))
-                return p.parent, attr
-            p = p.parent
-
-        return None, None
+        t1 = 3 * n.left.value
+        t2 = 2 * n.right.value
+        t = t1 + t2
+        # print(f'3 * {n.left.value} + 2 * {n.right.value} = ')
+        # print(f'{t1} + {t2} = {t}')
+        return t
 
     @staticmethod
-    def search_up(node, attr):
-        old_node = node
-        new_node = node
-        while hasattr(old_node, attr):
-            new_node = old_node
-            old_node = getattr(new_node, attr)
-
-        return new_node
-
-    def __str__(self):
-        return f"[{self.left},{self.right}]"
-
-    def __repr__(self):
-        return f"Node"
-
-
-def explode_created(root_node, created):
-    nodes = root_node.find_explosive_nodes()
-
-    for c in created:
+    def explode_created(root_node: NodePair, created: NodePair) -> bool:
+        nodes = root_node.find_explosive_nodes()
         for n in nodes:
-
-            if c.replace(" ", "") == str(n):
+            if created == n:
                 root_node.explode(n)
-                return root_node
-    return None
+                return True
+        return False
 
 
-def reduce(root_node, yield_steps=False):
+def reduce(root_node):
+
     # __ explode nodes
     nodes = root_node.find_explosive_nodes()
     for n in nodes:
-        big_nums = root_node.explode(n)
-        if yield_steps:
-            yield root_node
+        root_node.explode(n)
+        yield root_node
 
-    # __ split nodes
-    root_node, created = root_node.split_big_numbers()
-
-    items = []
-    items.extend(created)
+    created = True
     while created:
-        if yield_steps:
-            yield root_node
+        # __ split nodes
+        root_node, created = root_node.split_big_number()
+        yield root_node
 
         # if this created a node that should be exploded do it now.
-        result = explode_created(root_node, created)
-        if result is not None:
-            root_node = result
-            if yield_steps:
-                yield root_node
-
-        root_node, created = root_node.split_big_numbers()
-        items.extend(created)
+        result = root_node.explode_created(root_node, created)
+        if result is True:
+            yield root_node
 
     return root_node
 
 
-def part01():
-    lines = helpers.get_lines(r"./data/day_18.txt")
-    school = collections.deque([])
-    for line in lines:
-        n = Node(depth=0).load(eval(line))
-        school.append(n)
+def part01(lines: List[str]) -> int:
+    school = deque([NodePair(depth=0).load(eval(line)) for line in lines])
 
     # primer
-    final = Node.add(school.popleft(), school.popleft())
+    final = NodePair.add(school.popleft(), school.popleft())
+
     while school:
-        ii = reduce(final, yield_steps=True)
+        ii = reduce(final)
         t = None
         for i in ii:
             t = i
-        final = Node.add(t, school.popleft())
-    r = None
-    ii = reduce(final, yield_steps=True)
+        final = NodePair.add(t, school.popleft())
+
+    r: Optional[NodePair] = None
+    ii = reduce(final)
     for i in ii:
         r = i
 
     return r.magnitude()
 
 
-def part02():
-    school = helpers.get_lines(r"./data/day_18.txt")
-
+def part02(lines: List[str]) -> int:
     nums = []
-    for fish1 in school:
-        for fish2 in school:
-            t1 = Node(depth=0).load(eval(fish1))
-            t2 = Node(depth=0).load(eval(fish2))
+    for fish1 in lines:
+        for fish2 in lines:
+            t1 = NodePair(depth=0).load(eval(fish1))
+            t2 = NodePair(depth=0).load(eval(fish2))
             if str(t1) == str(t2):
                 continue
 
-            final = Node.add(t1, t2)
-            r = None
-            ii = reduce(final, yield_steps=True)
-            for i in ii:
-                r = i
-
-            if r is not None:
-                nums.append(r.magnitude())
+            final = NodePair.add(t1, t2)
+            r = [i for i in reduce(final)]
+            if r:
+                nums.append(r[-1].magnitude())
 
     return max(nums)
 
 
-def run():
-    assert part01() == 3551
-    assert part02() == 4555
+def run() -> None:
+    lines = helpers.get_lines(r"./data/day_18.txt")
+
+    assert part01(lines) == 3551
+    assert part02(lines) == 4555
 
 
 if __name__ == "__main__":

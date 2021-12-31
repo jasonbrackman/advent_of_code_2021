@@ -1,7 +1,7 @@
 import collections
 
 import helpers
-from day_18 import Node, reduce
+from day_18 import NodePair, reduce
 
 
 def tests():
@@ -26,14 +26,16 @@ def test01():
         ]
 
         for fish, expect in zip(lines[:4], expects):
-            node = Node(depth=0).load(eval(fish))
+            node = NodePair().load(eval(fish))
+
             ii = reduce(node)
-            t = str(next(ii))
-            assert t == expect, f"Explosion Test Error: Got {t}, expected {expect}"
+            t = next(ii)
+            a, b = str(t), expect
+            assert a == b, f"R:{a} E:{b}"
         print("!!Explode Tests Complete!!")
 
         fish = lines[5]
-        node = Node(depth=0).load(eval(fish))
+        node = NodePair(depth=0).load(eval(fish))
         ii = reduce(node)
         t = str(next(ii))
         assert t == "[[[[0,7],4],[7,[[8,4],9]]],[1,1]]"
@@ -52,14 +54,14 @@ def test02():
     lines = helpers.get_lines(r"../data/day_18_test_sum.txt")
     school = collections.deque([])
     for line in lines:
-        n = Node(depth=0).load(eval(line))
+        n = NodePair(depth=0).load(eval(line))
         school.append(n)
 
-    final = Node.add(school.popleft(), school.popleft())
+    final = NodePair.add(school.popleft(), school.popleft())
 
     while school:
         print("=" * 20)
-        t = Node(depth=0)
+        t = NodePair(depth=0)
         t.left = reduce(final)
         t.right = school.popleft()
         final = t
@@ -100,10 +102,10 @@ def test03():
     lines = helpers.get_lines(r"../data/day_18_test_sum2.txt")
     school = collections.deque([])
     for line in lines:
-        n = Node(depth=0).load(eval(line))
+        n = NodePair(depth=0).load(eval(line))
         school.append(n)
 
-    final = Node.add(school.popleft(), school.popleft())
+    final = NodePair.add(school.popleft(), school.popleft())
 
     ii = reduce(final)
     t = None
@@ -111,14 +113,14 @@ def test03():
         t = i
     assert str(t) == "[[[[4,0],[5,4]],[[7,7],[6,0]]],[[8,[7,7]],[[7,9],[5,0]]]]"
 
-    final = Node.add(t, school.popleft())
+    final = NodePair.add(t, school.popleft())
     ii = reduce(final)
     for i in ii:
         t = i
 
     assert str(t) == "[[[[6,7],[6,7]],[[7,7],[0,7]]],[[[8,7],[7,7]],[[8,8],[8,0]]]]"
 
-    final = Node.add(t, school.popleft())
+    final = NodePair.add(t, school.popleft())
     # print(final)
     ii = reduce(final)
     for i in ii:
@@ -133,10 +135,10 @@ def test03a():
     lines = helpers.get_lines(r"../data/day_18_test_sum2a.txt")
     school = collections.deque([])
     for line in lines:
-        n = Node(depth=0).load(eval(line))
+        n = NodePair(depth=0).load(eval(line))
         school.append(n)
 
-    final = Node.add(school.popleft(), school.popleft())
+    final = NodePair.add(school.popleft(), school.popleft())
 
     ii = reduce(final)
     t = None
@@ -150,17 +152,17 @@ def test04():
     lines = helpers.get_lines(r"../data/day_18_test_sum2.txt")
     school = collections.deque([])
     for line in lines:
-        n = Node(depth=0).load(eval(line))
+        n = NodePair(depth=0).load(eval(line))
         school.append(n)
 
     # primer
-    final = Node.add(school.popleft(), school.popleft())
+    final = NodePair.add(school.popleft(), school.popleft())
     while school:
         ii = reduce(final)
         t = None
         for i in ii:
             t = i
-        final = Node.add(t, school.popleft())
+        final = NodePair.add(t, school.popleft())
     r = None
     ii = reduce(final)
     for i in ii:
@@ -171,21 +173,21 @@ def test04():
 
 def test_magnitude():
     line = "[9,1]"
-    n = Node(depth=0)
+    n = NodePair(depth=0)
     n.load(eval(line))
-    assert Node.magnitude(n) == 29, f"E:{n}"
+    assert NodePair.magnitude(n) == 29, f"E:{n}"
     line = "[[9,1],[1,9]]"
-    n = Node(depth=0)
+    n = NodePair(depth=0)
     n.load(eval(line))
-    assert Node.magnitude(n) == 129
+    assert NodePair.magnitude(n) == 129
     line = "[[1,2],[[3,4],5]]"
-    n = Node(depth=0)
+    n = NodePair(depth=0)
     n.load(eval(line))
-    assert Node.magnitude(n) == 143
+    assert NodePair.magnitude(n) == 143
     line = "[[[[0,7],4],[[7,8],[6,0]]],[8,1]]"
-    n = Node(depth=0)
+    n = NodePair(depth=0)
     n.load(eval(line))
-    assert Node.magnitude(n) == 1384
+    assert NodePair.magnitude(n) == 1384
     items = [
         "[[[[1,1],[2,2]],[3,3]],[4,4]]",  # becomes 445.
         "[[[[3,0],[5,3]],[4,4]],[5,5]]",  # becomes 791.
@@ -194,9 +196,9 @@ def test_magnitude():
     ]
     expected = [445, 791, 1137, 3488]
     for item, expect in zip(items, expected):
-        n = Node(depth=0)
+        n = NodePair(depth=0)
         n.load(eval(item))
-        assert Node.magnitude(n) == expect
+        assert NodePair.magnitude(n) == expect
     print("!!Magnitude Tests Complete!!")
 
 if __name__ == "__main__":
