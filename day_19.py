@@ -138,22 +138,20 @@ def count_visited(visited):
     return a + b
 
 
-def part2(points):
-    ...
-
-
 def run():
     lines = helpers.get_lines(r"./data/day_19.txt")
     scanners = parse(lines)
-    scanners2 = parse(lines)
+
     scanners[0].origin = Point(0, 0, 0)
-    scanners2[0].origin = Point(0, 0, 0)
+
     p = part1b(scanners)
 
     # part1
     assert len(p.points) == 392
 
     # part2
+    scanners2 = parse(lines)
+    scanners2[0].origin = Point(0, 0, 0)
     fix_up(p, scanners2)
 
     items = []
@@ -161,8 +159,6 @@ def run():
         for s2 in scanners2:
             if s1 != s2:
                 if s1.origin is not None and s2.origin is not None:
-                    # print("s1:", s1.origin)
-                    # print("s2:", s2.origin)
                     items.append(s1.origin.manhattan_distance(s2.origin))
 
     # part2

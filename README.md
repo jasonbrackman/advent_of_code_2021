@@ -22,7 +22,7 @@ Python 3.8
 - [day_16.run]: Completed in 4.4 ms
 - [day_17.run]: Completed in 1211.4 ms
 - [day_18.run]: Completed in 14345.1 ms
-- ...
+- [day_19.run]: Completed in 9844.8 ms
 - [day_25.run]: Completed in 4470.3 ms
 
 Visuals
