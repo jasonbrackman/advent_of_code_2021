@@ -1,4 +1,0 @@
-start with scanner 1
-- take its count
-- compare to next scanner
-- add the unique count
