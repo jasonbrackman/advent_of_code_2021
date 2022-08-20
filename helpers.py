@@ -1,8 +1,9 @@
-from dataclasses import dataclass
 import json
 import multiprocessing
 import time
-from typing import Any, List, NamedTuple
+from dataclasses import dataclass
+from itertools import tee, pairwise
+from typing import Any, List, NamedTuple, Iterator
 
 
 def get_lines(path: str) -> List[str]:
@@ -13,6 +14,24 @@ def get_lines(path: str) -> List[str]:
 def get_ints(path: str) -> List[int]:
     with open(path, "r") as text:
         return [int(i) for i in text.readlines()]
+
+
+def yield_ints(path: str) -> Iterator[int]:
+    with open(path, "r") as text:
+        for i in text.readlines():
+            yield int(i)
+
+
+def window(iterable: Iterator[Any], size: int) -> Iterator[Any]:
+    if size == 2:
+        # Use the built-in pairwise
+        return pairwise(iterable)
+
+    items = tee(iterable, size)
+    for count, item in enumerate(items):
+        for c in range(count):
+            next(item, None)
+    return zip(*items)
 
 
 def load_json(path: str) -> dict:

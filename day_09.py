@@ -1,5 +1,4 @@
 import helpers
-from collections import defaultdict
 
 lines = helpers.get_lines(r'./data/day_09.txt')
 items = [[int(i) for i in line] for line in lines]
