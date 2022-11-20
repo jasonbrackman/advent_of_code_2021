@@ -1,5 +1,4 @@
 import json
-import multiprocessing
 import time
 from dataclasses import dataclass
 from itertools import tee, pairwise
@@ -9,6 +8,10 @@ from typing import Any, List, NamedTuple, Iterator
 def get_lines(path: str) -> List[str]:
     with open(path, "r") as text:
         return [line.strip() for line in text.readlines()]
+
+def lines_raw(path: str) -> List[str]:
+    with open(path, "r") as text:
+        return [line.strip('\n') for line in text.readlines()]
 
 
 def get_ints(path: str) -> List[int]:
@@ -54,7 +57,7 @@ class Pos(NamedTuple):
         return Pos(self.x - other.x, self.y - other.y)
 
     def manhattan_distance(self, other):
-        return abs(self.x - other.x) + abs(self.y + other.y)
+        return abs(self.x - other.x) + abs(self.y - other.y)
 
 
 class Node:
@@ -110,5 +113,5 @@ def time_it(command):
 
 
 def time_it_all(args: List):
-    with multiprocessing.Pool(4) as p:
-        p.map(time_it, args)
+    for arg in args:
+        time_it(arg)

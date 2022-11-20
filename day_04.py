@@ -10,6 +10,7 @@ class Board:
         self._cols = helpers.rotate_matrix_right(rows)
 
     def bingo(self, nums: Set[int]) -> bool:
+        """Check if the numbers passed in resulted in a win."""
         for line in itertools.chain(self._rows, self._cols):
             if all(c in nums for c in line):
                 return True
@@ -52,13 +53,13 @@ def simulate_win_order(numbers: List[int], boards: List[Board]) -> Dict[Board, i
     winners = dict()  # ordered
 
     nums = set()
-    for spin in numbers:
+    for number in numbers:
         for board in boards:
-            nums.add(spin)
+            nums.add(number)
             if board not in winners:
                 if board.bingo(nums):
                     unmarked = board.unmarked_value(nums)
-                    winners[board] = unmarked * spin
+                    winners[board] = unmarked * number
 
     return winners
 
