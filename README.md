@@ -25,7 +25,7 @@ Macbook Pro M1 Max / 32GB of Ram (macOS Monterey)
 - [day_19.run]: <broken> ?
 - [day_20.run]: Completed in 1450.6 ms
 - [day_21.run]: Completed in 0.1 ms (PART 1 ONLY)
-- [day_23.run]: Completed in 11288.9 ms (PART 1 ONLY)
+- [day_23.run]: Completed in 32288.9 ms
 - [day_25.run]: Completed in 620.4 ms
 
 MacBook Pro 3.1Ghz Dual-Core i7 / 16GB (macOS Monterey)
@@ -66,3 +66,7 @@ Visuals
 - Day 17 (demonstrates a nice curve for the volley, but does not depict the solution.)
 
 ![](visuals/day_17.png)
+
+- Day 23
+
+![](visuals/day_23.gif)

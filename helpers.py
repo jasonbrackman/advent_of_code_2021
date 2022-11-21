@@ -2,16 +2,17 @@ import json
 import time
 from dataclasses import dataclass
 from itertools import tee, pairwise
-from typing import Any, List, NamedTuple, Iterator
+from typing import Any, List, NamedTuple, Iterator, Self
 
 
 def get_lines(path: str) -> List[str]:
     with open(path, "r") as text:
         return [line.strip() for line in text.readlines()]
 
+
 def lines_raw(path: str) -> List[str]:
     with open(path, "r") as text:
-        return [line.strip('\n') for line in text.readlines()]
+        return [line.strip("\n") for line in text.readlines()]
 
 
 def get_ints(path: str) -> List[int]:
@@ -37,7 +38,7 @@ def window(iterable: Iterator[Any], size: int) -> Iterator[Any]:
     return zip(*items)
 
 
-def load_json(path: str) -> dict:
+def load_json(path: str):
     with open(path, "r") as f:
         return json.load(f)
 
@@ -61,13 +62,17 @@ class Pos(NamedTuple):
 
 
 class Node:
-    def __init__(self, state, parent) -> None:
+    def __init__(self, state, parent, cost=0) -> None:
         """
         :param state: The Node identity to be compared to another Node.
         :param parent:
         """
         self.state = state
         self.parent = parent
+        self.cost = cost
+
+    def __lt__(self, other: "Node") -> bool:
+        return self.cost < other.cost
 
 
 def rotate_matrix_right(grid: List[List[Any]]) -> List[List[Any]]:
@@ -76,32 +81,6 @@ def rotate_matrix_right(grid: List[List[Any]]) -> List[List[Any]]:
         for index, c in enumerate(cell):
             rotated[index].append(c)
     return rotated
-
-
-# def bfs(
-#     initial: T, goal_test: Callable[[T], bool], successors: Callable[[T], List[T]]
-# ) -> Optional[Node[T]]:
-#     # frontier is where we've yet to go
-#     frontier: Queue[Node[T]] = Queue()
-#     frontier.push(Node(initial, None))  # explored is where we've been
-#
-#     explored: Set[T] = {initial}
-#
-#     # keep going while there is more to explore
-#     while not frontier.empty:
-#         current_node: Node[T] = frontier.pop()
-#         current_state: T = current_node.state  # if we found the goal, we're done
-#         if goal_test(current_state):
-#             return current_node
-#
-#         # check where we can go next and haven't explored
-#         for child in successors(current_state):
-#             if child in explored:  # skip children we already explored
-#                 continue
-#             explored.add(child)
-#             frontier.push(Node(child, current_node))
-#
-#     return None
 
 
 def time_it(command):

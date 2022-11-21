@@ -25,223 +25,283 @@ Once an amphipod stops moving in the hallway, it will stay in that spot until it
 - I want to ensure the hallways have same items adjacent to each other
 - I want to know the cheapest solution
 """
+from __future__ import annotations
 
-import sys
+import copy
+from queue import PriorityQueue
 from functools import cache
-from typing import Dict, Tuple, Optional, List, Set
+from typing import Dict, Tuple, Optional, List
 
-from helpers import lines_raw
+from helpers import lines_raw, Node
+from visuals import display
+
+ENERGY_LUT = {
+    "A": 1,
+    "B": 10,
+    "C": 100,
+    "D": 1000,
+}
+
+HALL = {
+    "H": ((1, 1), (1, 2), (1, 4), (1, 6), (1, 8), (1, 10), (1, 11)),
+}
 
 
-class Burrow:
-    HALL = {
-        "H": ((1, 1), (1, 2), (1, 4), (1, 6), (1, 8), (1, 10), (1, 11)),
-    }
-
-    ROOMS = {
-        "A": ((2, 3), (3, 3)),
-        "B": ((2, 5), (3, 5)),
-        "C": ((2, 7), (3, 7)),
-        "D": ((2, 9), (3, 9)),
-    }
-
-    ENERGY_LUT = {
-        "A": 1,
-        "B": 10,
-        "C": 100,
-        "D": 1000,
-    }
-
-    def __init__(self):
-        self._raw: List[List[str]] = []
-        self._pods: Dict[Tuple[int, int], str] = {}
-        self.cost = 0
-
-    def __hash__(self):
-        return hash(tuple(self._pods.items()))
-
-    def __str__(self) -> str:
-        raw = self._raw
-        for k, v in self._pods.items():
-            i, j = k
-            if v is None:
-                raw[i][j] = "."
+def parse_data(data: List[str]) -> Dict[Tuple[int, int], str]:
+    pods = dict()
+    for row in range(len(data)):
+        for col in range(len(data[row])):
+            icon = data[row][col]
+            if icon in (" ", "#"):
+                pass
             else:
-                raw[i][j] = v
-        s = ""
-        for r in raw:
-            s += "".join(r)
-            s += "\n"
-        return s
+                pods[(row, col)] = icon
 
-    def set_data(self, data):
-        self.cost = 0
-        self._pods.clear()
-        self._raw.clear()
+    return pods
 
-        self._raw = [list(d) for d in data]
-        for row in range(len(data)):
-            for col in range(len(data[row])):
-                icon = data[row][col]
-                if icon in (" ", '#'):
-                    pass
-                else:
-                    self._pods[(row, col)] = icon
 
-        return self._pods
+def winner(
+    state: Dict[Tuple[int, int], str], rooms: Dict[str, Tuple[Tuple[int, int], ...]]
+) -> bool:
+    for room_name, pods in rooms.items():
+        for pod in pods:
+            if state[pod] != room_name:
+                return False
+    return True
 
-    @cache
-    def get_neighbours(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
-        up = pos[0] - 1, pos[1]
-        dn = pos[0] + 1, pos[1]
-        lt = pos[0], pos[1] - 1
-        rt = pos[0], pos[1] + 1
-        return [d for d in (up, lt, rt, dn) if d in self._pods]
 
-    def state(self):
-        return self.cost, tuple(self._pods.items())
-
-    def move(self, dist, source, destination) -> None:
-        self.cost += Burrow.ENERGY_LUT[self._pods[source]] * dist
-        self._pods[source], self._pods[destination] = self._pods[destination], self._pods[source]
-
-    def room_available(self, room_name) -> Optional[Tuple[int, int]]:
-        positions = Burrow.ROOMS[room_name]
-
-        high = self._pods[positions[0]]  # | |
-        low = self._pods[positions[1]]   # |_|
-
-        if low == '.' and high == '.':
-            return positions[1]
-
-        if low == room_name and high == '.':
-            return positions[0]
-
-        return None
-
-    def path_is_clear(self, src, dst) -> int:
-        q = {(src, 0), }
-        visited = {src, }
-        while q:
-            n, c = q.pop()
-            if n == dst:
-                return c
-
-            for pos in self.get_neighbours(n):
-                if pos not in visited:
-                    visited.add(pos)
-                    if self._pods[pos] == '.':
-                        q.add((pos, c+1))
-
-        return 0
-
-    def destinations(self):
-        possibles = []
-
-        # Let's go through all pods...
-        for pos, pod_name in self._pods.items():
-            if pod_name == '.':
-                continue  # nothing to do; this is not a pod
-
-            if self.in_final_spot(pod_name, pos):
-                continue  # nothing to do; this pod is in a final room
-
-            # The rest of the items are either in the WRONG ROOM or in a HALLWAY
-
-            # Is a path to a good ROOM available?
-            room = self.room_available(pod_name)
-            if room:
-                dist = self.path_is_clear(pos, room)
-                if dist > 0:
-                    # Room available and we can get there?  Let's GO!
-                    return [(dist, pos, room)]
-
-            # All that is left are options to leave a bad room and go into the hallway (if spot/path is available.)
-            if pos not in Burrow.HALL['H']:
-                for hallway in Burrow.HALL['H']:
-                    dist = self.path_is_clear(pos, hallway)
-                    if dist > 0:
-                        possibles.append((dist, pos, hallway))
-
-        return sorted(possibles, key=lambda x: x[0])
-
-    def is_solved(self) -> bool:
-        for room_name, pods in Burrow.ROOMS.items():
-            for pod in pods:
-                if str(self._pods[pod]) != room_name:
-                    return False
-        return True
-
-    def winner(self, state) -> bool:
-        for room_name, pods in Burrow.ROOMS.items():
-            for pod in pods:
-                if str(state[pod]) != room_name:
-                    return False
-        return True
-
-    def in_final_spot(self, entity_name, pos) -> bool:
-        positions = Burrow.ROOMS[entity_name]
-        low = self._pods[positions[1]]
-
-        if pos not in positions:
-            return False
-
-        if pos in positions:
-            if pos == positions[1]:  # low position of the room (must be good).
-                return True
-
-            if pos == positions[0] and low and low == entity_name:
-                return True
-
+def in_final_spot(
+    state: Dict[Tuple[int, int], str],
+    rooms: Dict[str, Tuple[Tuple[int, int], ...]],
+    pod_name: str,
+    pos: Tuple[int, int],
+) -> bool:
+    positions = rooms[pod_name]
+    if pos not in positions:
         return False
 
-def do_work(burrow: Burrow, max_cost: int, seen: Set[int] = None) -> Optional[int]:
-    if seen is None:
-        seen = {burrow.state(), }
+    # if the floors before the room are filled with the pod_name; then good to go.
+    for p in positions:
+        if pos == p:
+            return True
+        else:
+            current_name = state[p]
+            if current_name != pod_name:
+                return False
 
-    if burrow.is_solved():
-        return burrow.cost
+    return False
 
-    for dist, pos, neighbour in burrow.destinations():
-        burrow.move(dist, pos, neighbour)
-        state = burrow.state()
-        if state not in seen:
-            seen.add(state)
-            if burrow.cost < max_cost:
-                result = do_work(burrow, max_cost, seen)
-                if result is not None:
-                    return result
 
-        burrow.move(dist * -1, neighbour, pos)
+def room_available(
+    state: Dict[Tuple[int, int], str],
+    rooms: Dict[str, Tuple[Tuple[int, int], ...]],
+    room_name: str,
+) -> Optional[Tuple[int, int]]:
+    lowest_floor_available = None
+
+    positions = rooms[room_name]
+
+    # from lower floor to top check for: (1) room_name else False (2) then for '.' else False
+    for p in positions:
+        icon = state[p]
+        if icon == ".":
+            if lowest_floor_available is None:
+                lowest_floor_available = p
+
+        elif icon == room_name:
+            # pass unless a floor is already empty -- then it is blocking.
+            if lowest_floor_available is not None:
+                return None
+
+        else:
+            # blocked
+            return None
+
+    return lowest_floor_available
+
+
+@cache
+def pos_neighbours(
+    state: Dict[Tuple[int, int], str], pos: Tuple[int, int]
+) -> List[Tuple[int, int]]:
+    up = pos[0] - 1, pos[1]
+    dn = pos[0] + 1, pos[1]
+    lt = pos[0], pos[1] - 1
+    rt = pos[0], pos[1] + 1
+
+    return [d for d in (up, lt, rt, dn) if d in state]
+
+
+def path_is_clear(
+    state: Dict[Tuple[int, int], str], src: Tuple[int, int], dst: Tuple[int, int]
+) -> int:
+    q = {
+        (src, 0),
+    }
+    visited = {
+        src,
+    }
+    while q:
+        n, c = q.pop()
+        if n == dst:
+            return c
+
+        for pos in pos_neighbours(tuple(state.keys()), n):
+            if pos not in visited:
+                visited.add(pos)
+                if state[pos] == ".":
+                    q.add((pos, c + 1))
+
+    return 0
+
+
+def successors(
+    state: Dict[Tuple[int, int], str], rooms: Dict[str, Tuple[Tuple[int, int], ...]]
+) -> List[Tuple[int, Tuple[int, int], Tuple[int, int]]]:
+    room_found = False
+    results = []
+    for src, pod_name in state.items():
+        if pod_name == ".":
+            continue  # nothing to do; this is not a pod
+
+        if in_final_spot(state, rooms, pod_name, src):
+            continue  # nothing to do; this pod is in a final room
+
+        # The rest of the items are either in the WRONG ROOM or in a HALLWAY
+
+        # Is a path to a good ROOM available?
+        dst = room_available(state, rooms, pod_name)
+        if dst:
+            dist = path_is_clear(state, src, dst)
+            if dist > 0:
+                room_found = True
+                # Room available and we can get there?  Let's GO!
+                results.append((dist, src, dst))
+
+        # All that is left are options to leave a bad room and go into the hallway (if spot/path is available.)
+        if room_found is False:
+            if src not in HALL["H"]:
+                for dst in HALL["H"]:
+                    dist = path_is_clear(state, src, dst)
+                    if dist > 0:
+                        results.append((dist, src, dst))
+
+    return results
+
+
+def pprint(lines: List[str], state: Dict[Tuple[int, int], str]) -> None:
+    raw = [list(line) for line in lines]
+    for k, v in state.items():
+        i, j = k
+        if v is None:
+            raw[i][j] = "."
+        else:
+            raw[i][j] = v
+
+    s = ""
+    for r in raw:
+        s += "".join(r)
+        s += "\n"
+    return s
+
+
+def raw(lines: List[str], state: Dict[Tuple[int, int], str]) -> None:
+    raw = [list(line) for line in lines]
+    for k, v in state.items():
+        i, j = k
+        if v is None:
+            raw[i][j] = "."
+        else:
+            raw[i][j] = v
+
+    return raw
+
+
+def bfs(
+    state: Dict[Tuple[int, int], str], rooms: Dict[str, Tuple[Tuple[int, int], ...]]
+) -> Optional[Node]:
+    q: PriorityQueue[Node] = PriorityQueue()
+    q.put(Node(state, None, cost=0))
+    seen = {
+        (0, tuple(state.values())),
+    }
+
+    while not q.empty():
+        node = q.get()
+
+        state = node.state
+        cost = node.cost
+        if winner(state, rooms):
+            return node
+
+        for dist, src, dst in successors(state, rooms):
+
+            new_state = copy.deepcopy(state)
+
+            new_cost = cost + ENERGY_LUT[state[src]] * dist
+            new_state[src], new_state[dst] = new_state[dst], new_state[src]
+
+            new_state_hash: Tuple[int, Tuple[str, ...]] = (
+                new_cost,
+                tuple(new_state.values()),
+            )
+            if new_state_hash not in seen:
+                seen.add(new_state_hash)
+                q.put(Node(new_state, node, cost=new_cost))
+
     return None
 
 
-def part01(lines, max_cost: int) -> int:
-    burrow = Burrow()
-    costs = {max_cost, }
-    while max_cost is not None:
-        burrow.set_data(lines)
-        max_cost = do_work(burrow, max_cost)
-        if max_cost is not None:
-            costs.add(max_cost)
-    return min(costs)
+def run() -> None:
 
-
-def run():
     lines = lines_raw(r"./data/day_23.txt")
-    max_cost = sys.maxsize  # 18051  # sys.maxsize
-    assert part01(lines, max_cost) == 18_051
-    # print(part02(lines, max_cost))  # 15_060?
-    # import cProfile
-    #
-    # pr = cProfile.Profile()
-    # pr.enable()
-    # print(part01(lines, max_cost))
-    # pr.disable()
-    # pr.print_stats(sort="calls")
+    state = parse_data(lines)
 
+    rooms: Dict[str, Tuple[Tuple[int, int], ...]] = {
+        "A": ((3, 3), (2, 3)),
+        "B": ((3, 5), (2, 5)),
+        "C": ((3, 7), (2, 7)),
+        "D": ((3, 9), (2, 9)),
+    }
+    result = bfs(state, rooms)
+    assert result.cost == 18_051
+
+    lines = lines_raw(r"./data/day_23_part2.txt")
+    state = parse_data(lines)
+    rooms: Dict[str, Tuple[Tuple[int, int], ...]] = {
+        "A": ((5, 3), (4, 3), (3, 3), (2, 3)),
+        "B": ((5, 5), (4, 5), (3, 5), (2, 5)),
+        "C": ((5, 7), (4, 7), (3, 7), (2, 7)),
+        "D": ((5, 9), (4, 9), (3, 9), (2, 9)),
+    }
+    result = bfs(state, rooms)
+    assert result.cost == 50_245
+
+    # items = []
+    #
+    # while result is not None:
+    #     r = raw(lines, result.state)
+    #     items.append(r)
+    #     result = result.parent
+    #
+    # count = 0
+    # for r in reversed(items):
+    #     display.generic_out(
+    #         r,
+    #         {
+    #             "#": "blackish",
+    #             ".": "white",
+    #             "A": "red",
+    #             "B": "green",
+    #             "C": "blue",
+    #             "D": "purple",
+    #         },
+    #         "day_23",
+    #         count,
+    #     )
+    #     count += 1
+    # display.generate_gif(r"./images", "day_23")
 
 
 if __name__ == "__main__":
     run()
-
